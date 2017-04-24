@@ -1,0 +1,426 @@
+#LyX 2.2 created this file. For more info see http://www.lyx.org/
+\lyxformat 508
+\begin_document
+\begin_header
+\save_transient_properties true
+\origin unavailable
+\textclass article
+\use_default_options true
+\maintain_unincluded_children false
+\language english
+\language_package default
+\inputencoding auto
+\fontencoding global
+\font_roman "default" "default"
+\font_sans "default" "default"
+\font_typewriter "default" "default"
+\font_math "auto" "auto"
+\font_default_family default
+\use_non_tex_fonts false
+\font_sc false
+\font_osf false
+\font_sf_scale 100 100
+\font_tt_scale 100 100
+\graphics default
+\default_output_format default
+\output_sync 0
+\bibtex_command default
+\index_command default
+\paperfontsize default
+\use_hyperref false
+\papersize default
+\use_geometry false
+\use_package amsmath 1
+\use_package amssymb 1
+\use_package cancel 1
+\use_package esint 1
+\use_package mathdots 1
+\use_package mathtools 1
+\use_package mhchem 1
+\use_package stackrel 1
+\use_package stmaryrd 1
+\use_package undertilde 1
+\cite_engine basic
+\cite_engine_type default
+\biblio_style plain
+\use_bibtopic false
+\use_indices false
+\paperorientation portrait
+\suppress_date false
+\justification true
+\use_refstyle 1
+\index Index
+\shortcut idx
+\color #008000
+\end_index
+\secnumdepth 3
+\tocdepth 3
+\paragraph_separation indent
+\paragraph_indentation default
+\quotes_language english
+\papercolumns 1
+\papersides 1
+\paperpagestyle default
+\tracking_changes false
+\output_changes false
+\html_math_output 0
+\html_css_as_file 0
+\html_be_strict false
+\end_header
+
+\begin_body
+
+\begin_layout Section
+Model
+\end_layout
+
+\begin_layout Standard
+Following Gustafson's Local Sensitivity to Prior Marginals, the likelihood
+ is
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{eqnarray*}
+p\left(s,t\vert\lambda\right) & = & \prod_{i=1}^{10}\exp\left(-\lambda_{i}t_{i}\right)\frac{\left(\lambda_{i}t_{i}\right)^{s_{i}}}{s_{i}!}\\
+p\left(\lambda_{i}\vert\beta\right) & = & \frac{1}{\Gamma\left(\omega_{0}\right)\beta^{\omega_{0}}}\lambda_{i}^{\omega_{0}-1}\exp\left(-\frac{\lambda_{i}}{\beta}\right)\\
+p\left(\beta\right) & = & C\beta^{-\gamma_{0}-1}\exp\left(-\frac{\delta_{0}}{\beta}\right)=InvGamma\left(\gamma_{0},\delta_{0}\right)\\
+\log p\left(s,t,\lambda,\beta\right) & = & \sum_{i=1}^{10}\left(-\lambda_{i}t_{i}+s_{i}\log\lambda_{i}+s_{i}\log t_{i}-\log\left(s_{i}!\right)\right)+\\
+ &  & \sum_{i=1}^{10}\left(\left(\omega_{0}-1\right)\log\lambda_{i}-\frac{\lambda_{i}}{\beta}-\omega_{0}\log\left(\beta\right)\right)\\
+ &  & -\left(\gamma_{0}+1\right)\log\beta-\frac{\delta_{0}}{\beta}+C
+\end{eqnarray*}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Section
+Variational Distributions
+\end_layout
+
+\begin_layout Standard
+We can use the variational distributions
+\begin_inset Formula 
+\begin{eqnarray*}
+q\left(\beta\right) & = & Lognormal\left(\mu_{\beta},\sigma_{\beta}^{2}\right)\\
+q\left(\lambda_{i}\right) & = & Gamma
+\end{eqnarray*}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+The lognormal distribution has known moments
+\begin_inset Formula 
+\begin{eqnarray*}
+\mathbb{E}_{q}\left[\beta^{n}\right] & = & \exp\left(n\mu_{\beta}+\frac{1}{2}n^{2}\sigma_{\beta}^{2}\right),\forall n\\
+\mathbb{E}_{q}\left[\log\beta\right] & = & \mu_{\beta}
+\end{eqnarray*}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+It may be fun to try the simulation-based example, too, though.
+ The lognormal has the advantage of being easily transformable, unlike the
+ gamma, which involved derivatives of the incomplete gamma function.
+\end_layout
+
+\begin_layout Section
+Prior perturbations
+\end_layout
+
+\begin_layout Standard
+Following Gustafson, prior marginals, section 4:
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{eqnarray*}
+p\left(\lambda_{i}\vert\beta\right) & = & Gamma\left(\omega_{0},\beta\right)\\
+ & = & \frac{1}{\Gamma\left(\omega_{0}\right)\beta^{\omega_{0}}}\lambda_{i}^{\omega_{0}-1}\exp\left(-\frac{\lambda_{i}}{\beta}\right)\\
+p\left(\beta\right) & = & InvGamma\left(\gamma_{0},\delta_{0}\right)\\
+ & = & C\beta^{-\gamma_{0}-1}\exp\left(-\frac{\delta_{0}}{\beta}\right)
+\end{eqnarray*}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+It follows from the scaling property of the gamma distribution that with
+ 
+\begin_inset Formula $\lambda_{i}^{*}=\frac{\lambda_{i}}{\beta}$
+\end_inset
+
+,
+\begin_inset Formula 
+\begin{align*}
+p\left(\lambda_{i}^{*}\right) & =Gamma\left(\omega_{0},1\right)\\
+ & =\frac{1}{\Gamma\left(\omega_{0}\right)}\lambda_{i}^{\omega_{0}-1}\exp\left(-\lambda_{i}^{*}\right)
+\end{align*}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+which is independent of 
+\begin_inset Formula $\beta$
+\end_inset
+
+, so that the prior factorizes:
+\begin_inset Formula 
+\begin{align*}
+p\left(\lambda^{*},\beta\right) & =p\left(\beta\right)\prod_{i}p\left(\lambda_{i}^{*}\right)
+\end{align*}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Note that without this, the prior doesn't factorize the same way as the
+ variational distribution:
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{align*}
+\frac{q\left(\theta\right)}{p\left(\theta\right)} & =\frac{q\left(\beta\right)\prod q\left(\lambda_{i}\right)}{p\left(\beta\right)\prod p\left(\lambda_{i}\vert\beta\right)}
+\end{align*}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+To rewrite the model in terms of 
+\begin_inset Formula $\lambda^{*}$
+\end_inset
+
+ is
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{eqnarray*}
+\log p\left(s,t,\lambda^{*},\beta\right) & = & \sum_{i=1}^{10}\left(-\beta\lambda_{i}^{*}t_{i}+s_{i}\log\beta\lambda_{i}^{*}+s_{i}\log t_{i}-\log\left(s_{i}!\right)\right)+\\
+ &  & \sum_{i=1}^{10}\left(\left(\omega_{0}-1\right)\log\left(\beta\lambda_{i}^{*}\right)-\lambda_{i}^{*}-\omega_{0}\log\left(\beta\right)+\log\beta\right)\\
+ &  & -\left(\gamma_{0}+1\right)\log\beta-\frac{\delta_{0}}{\beta}+C\\
+ & = & \sum_{i=1}^{10}\left(-\beta\lambda_{i}^{*}t_{i}+s_{i}\log\lambda_{i}^{*}+s_{i}\log\beta+s_{i}\log t_{i}-\log\left(s_{i}!\right)\right)+\\
+ &  & \sum_{i=1}^{10}\left(\left(\omega_{0}-1\right)\log\left(\lambda_{i}^{*}\right)-\lambda_{i}^{*}\right)\\
+ &  & -\left(\gamma_{0}+1\right)\log\beta-\frac{\delta_{0}}{\beta}+C
+\end{eqnarray*}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Note that when computing the variational variance of 
+\begin_inset Formula $\lambda$
+\end_inset
+
+ that
+\begin_inset Formula 
+\begin{align*}
+\textrm{Var}\left(XY\right) & =E\left[\left(XY-E\left[X\right]E\left[Y\right]\right)^{2}\right]\\
+ & =E\left[X^{2}Y^{2}-2XYE\left[X\right]E\left[Y\right]+E\left[X\right]^{2}E\left[Y\right]^{2}\right]\\
+ & =E\left[X^{2}\right]E\left[Y^{2}\right]-E\left[X\right]^{2}E\left[Y\right]^{2}\\
+\textrm{Var}\left(X\right)\textrm{Var}\left(Y\right) & =\left(E\left[X^{2}\right]-E\left[X\right]^{2}\right)\left(E\left[Y^{2}\right]-E\left[Y\right]^{2}\right)\\
+ & =E\left[X^{2}\right]E\left[Y^{2}\right]-E\left[X\right]^{2}E\left[Y\right]^{2}+2E\left[X\right]^{2}E\left[Y\right]^{2}-E\left[Y^{2}\right]E\left[X\right]^{2}-E\left[Y\right]^{2}E\left[X^{2}\right]\\
+ & =\textrm{Var}\left(XY\right)+2E\left[X\right]^{2}E\left[Y\right]^{2}-E\left[Y^{2}\right]E\left[X\right]^{2}-E\left[Y\right]^{2}E\left[X^{2}\right]\\
+ & =\textrm{Var}\left(XY\right)+E\left[X\right]^{2}\left(E\left[Y\right]^{2}-E\left[Y^{2}\right]\right)+E\left[Y\right]^{2}\left(E\left[X\right]^{2}-E\left[X^{2}\right]\right)\\
+ & =\textrm{Var}\left(XY\right)-E\left[X\right]^{2}\textrm{Var}\left(Y\right)-E\left[Y\right]^{2}\textrm{Var}\left(X\right)\\
+\textrm{Var}\left(XY\right) & =\textrm{Var}\left(X\right)\textrm{Var}\left(Y\right)+E\left[X\right]^{2}\textrm{Var}\left(Y\right)+E\left[Y\right]^{2}\textrm{Var}\left(X\right)
+\end{align*}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+.
+\end_layout
+
+\begin_layout Section
+Old, now unnecessary:
+\end_layout
+
+\begin_layout Standard
+The lognormal has a moment parameterization given by
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\begin{eqnarray*}
+\log q\left(\beta\right) & = & C-\frac{\left(\log\left(\beta\right)-\mu\right)^{2}}{2\sigma^{2}}\\
+ & = & C-\frac{1}{2\sigma^{2}}\left(\log\beta\right)^{2}+\frac{\mu}{\sigma^{2}}\log\beta
+\end{eqnarray*}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+That is, the relevant moment parameters are 
+\begin_inset Formula $\log\beta$
+\end_inset
+
+ and 
+\begin_inset Formula $\left(\log\beta\right)^{2}$
+\end_inset
+
+.
+ Let's expand it a little bit.
+ We have the two parameterizations
+\begin_inset Formula 
+\begin{eqnarray*}
+\theta & = & \left(\begin{array}{c}
+\mu\\
+\sigma
+\end{array}\right)\\
+m & = & \left(\begin{array}{c}
+\log\beta\\
+\left(\log\beta\right)^{2}
+\end{array}\right)
+\end{eqnarray*}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+We want the variance of 
+\begin_inset Formula $\mathbb{E}_{q}\left[\beta\right]$
+\end_inset
+
+, which is given by
+\begin_inset Formula 
+\begin{eqnarray*}
+\mathbb{E}_{q}\left[\beta\right] & = & f\left(m\right)\\
+\textrm{Var}\left(\beta\right) & = & \nabla f^{T}\hat{\Sigma}\nabla f
+\end{eqnarray*}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+The most general way to do this is to write
+\begin_inset Formula 
+\begin{eqnarray*}
+\mathbb{E}_{q}\left[\beta\right] & = & g\left(\theta\right)\\
+m & = & m\left(\theta\right)\\
+\frac{d\mathbb{E}_{q}\left[\beta\right]}{dm} & = & \frac{d\theta^{T}}{dm}\frac{d\mathbb{E}_{q}\left[\beta\right]}{d\theta}\\
+ & = & \left(\frac{dm}{d\theta^{T}}\right)^{-1}\frac{d\mathbb{E}_{q}\left[\beta\right]}{d\theta}
+\end{eqnarray*}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+We write
+\begin_inset Formula 
+\begin{eqnarray*}
+\mathbb{E}_{q}\left[\beta\right] & = & \exp\left(\mu+\frac{1}{2}\sigma^{2}\right)\\
+\frac{d\mathbb{E}_{q}\left[\beta\right]}{dm} & = & \frac{d\theta^{T}}{dm}\frac{d\mathbb{E}_{q}\left[\beta\right]}{d\theta}\\
+ & = & V^{-1}\frac{d\mathbb{E}_{q}\left[\beta\right]}{d\theta}\\
+V & = & \textrm{Var}\left(m\right)
+\end{eqnarray*}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Note that 
+\begin_inset Formula $\log\beta$
+\end_inset
+
+ is normal, so 
+\begin_inset Formula $V$
+\end_inset
+
+ is easy to calculate from 
+\begin_inset Formula $\theta$
+\end_inset
+
+:
+\begin_inset Formula 
+\begin{eqnarray*}
+V & = & \left(\begin{array}{cc}
+\sigma^{2} & 2\mu\sigma^{2}\\
+2\mu\sigma^{2} & \left(2\sigma^{4}+4\sigma^{2}\mu^{2}\right)
+\end{array}\right)\\
+\textrm{det}\left(V\right) & = & \frac{1}{2\sigma^{6}+4\sigma^{4}\mu^{2}-4\mu^{2}\sigma^{4}}=\frac{1}{2\sigma^{6}}\\
+V^{-1} & = & \frac{1}{2\sigma^{6}}\left(\begin{array}{cc}
+\left(2\sigma^{4}+4\sigma^{2}\mu^{2}\right) & -2\mu\sigma^{2}\\
+-2\mu\sigma^{2} & \sigma^{2}
+\end{array}\right)
+\end{eqnarray*}
+
+\end_inset
+
+ Then
+\begin_inset Formula 
+\begin{eqnarray*}
+\frac{d\mathbb{E}_{q}\left[\beta\right]}{d\mu} & = & \mathbb{E}_{q}\left[\beta\right]\\
+\frac{d\mathbb{E}_{q}\left[\beta\right]}{d\sigma} & = & \mathbb{E}_{q}\left[\beta\right]\sigma
+\end{eqnarray*}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+So 
+\begin_inset Formula 
+\begin{eqnarray*}
+\frac{d\mathbb{E}_{q}\left[\beta\right]}{dm} & = & \frac{1}{2\sigma^{6}}\left(\begin{array}{cc}
+\left(2\sigma^{4}+4\sigma^{2}\mu^{2}\right) & -2\mu\sigma^{2}\\
+-2\mu\sigma^{2} & \sigma^{2}
+\end{array}\right)\left(\begin{array}{c}
+\mathbb{E}_{q}\left[\beta\right]\\
+\mathbb{E}_{q}\left[\beta\right]\sigma
+\end{array}\right)\\
+ & = & \frac{1}{2\sigma^{6}}\left(\begin{array}{c}
+2\sigma^{4}+4\sigma^{2}\mu^{2}-2\mu\sigma^{3}\\
+-2\mu\sigma^{2}+\sigma^{3}
+\end{array}\right)\mathbb{E}_{q}\left[\beta\right]\\
+ & = & \left(\begin{array}{c}
+\sigma^{-2}+2\sigma^{-4}\mu^{2}-\mu\sigma^{-3}\\
+-\mu\sigma^{-4}+\frac{1}{2}\sigma^{-3}
+\end{array}\right)\mathbb{E}_{q}\left[\beta\right]
+\end{eqnarray*}
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Probably it would be nice to write some tools to do this with autodiff.
+\end_layout
+
+\end_body
+\end_document
