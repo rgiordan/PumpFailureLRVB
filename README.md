@@ -5,11 +5,20 @@ This repo performs Markov Chain Monte Carlo (MCMC) and Variational Bayes
 for the MCMC estimates as well as the derivative estimates needed for
 VB estimation and sensitivity analysis.
 
-To try it out, run
-* fit_mcmc.R
-* fit_vb.R
+You will need the R library `LRVBUtils`.  To install it, start R, and run
+
+```R
+> library(devtools)
+> install_github("rgiordan/LRVBUtils")
+```
+
+Once installed, you should be able to run the scripts
+* `fit_mcmc.R`
+* `fit_vb.R`
+
 ...in that order.
 
+### References
 
 [1] Gustafson, Paul. "Local sensitivity of inferences to prior marginals." Journal of the American Statistical Association 91.434 (1996): 774-781.
 APA
