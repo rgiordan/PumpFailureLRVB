@@ -16,24 +16,30 @@ model_name <- "pump_model_transform"
 
 mcmc_results_file <- paste(model_name, "mcmc.Rdata", sep="_")
 
+#################
+# Load or compile the stan model.
+
 rdata_file <- file.path(data_directory, paste(model_name, "stan.Rdata", sep="_")) 
 if (file.exists(rdata_file)) {
   print("Loading from file.")
   load(rdata_file)
 } else {
   print("Compiling model.")
+  mcmc_model <- stan_model(file.path(project_directory, "mcmc_stan/pump_model_mcmc.stan"))
+  mcmc_log_prior <- stan_model(file.path(project_directory, "mcmc_stan/pump_model_mcmc_log_prior.stan"))
+
   vb_means <- stan_model(file.path(project_directory, "vb_transform_stan/vb_means.stan"))
   vb_model <- stan_model(file.path(project_directory, "vb_transform_stan/pump_model_vb.stan"))
   vb_log_prior <- stan_model(file.path(project_directory, "vb_transform_stan/pump_model_log_prior_vb.stan"))
   vb_log_density <- stan_model(file.path(project_directory, "vb_transform_stan/vb_density.stan"))
   
-  mcmc_model <- stan_model(file.path(project_directory, "mcmc_stan/pump_model_mcmc.stan"))
-  mcmc_log_prior <- stan_model(file.path(project_directory, "mcmc_stan/pump_model_mcmc_log_prior.stan"))
-  
   save(vb_model, vb_means, vb_log_prior, vb_log_density,
        mcmc_model, mcmc_log_prior, file=rdata_file)
 }
 
+
+#################
+# Load the data.
 
 pump_data <- read.csv(file.path(data_directory, "pump_failure_data.csv"))
 data_dat <- list(N=nrow(pump_data), s=pump_data$failures, t=pump_data$thousand_hours,
@@ -58,9 +64,8 @@ gustafson_result_df <-
               method="gustafson")
 
 
-
 ################
-# MCMC
+# Run MCMC
 
 fit <- sampling(mcmc_model, data_dat, iter=500000, chains=1)
 mcmc_draws <- extract(fit)
