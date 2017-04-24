@@ -8,8 +8,10 @@ VB estimation and sensitivity analysis.
 To try it out, run
 * fit_mcmc.R
 * fit_vb.R
+
 ...in that order.
 
+### References
 
 [1] Gustafson, Paul. "Local sensitivity of inferences to prior marginals." Journal of the American Statistical Association 91.434 (1996): 774-781.
 APA
