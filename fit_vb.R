@@ -16,7 +16,7 @@ model_name <- "pump_model_transform"
 
 save_filename <- paste(model_name, "vb_analysis.Rdata", sep="_")
 
-rdata_file <- file.path(data_directory, paste(model_name, "stan.Rdata", sep="_")) 
+rdata_file <- file.path(data_directory, paste(model_name, "stan.Rdata", sep="_"))
 if (file.exists(rdata_file)) {
   print("Loading from file.")
   load(rdata_file)
@@ -26,10 +26,10 @@ if (file.exists(rdata_file)) {
   vb_model <- stan_model(file.path(project_directory, "vb_transform_stan/pump_model_vb.stan"))
   vb_log_prior <- stan_model(file.path(project_directory, "vb_transform_stan/pump_model_log_prior_vb.stan"))
   vb_log_density <- stan_model(file.path(project_directory, "vb_transform_stan/vb_density.stan"))
-  
+
   mcmc_model <- stan_model(file.path(project_directory, "mcmc_stan/pump_model_mcmc.stan"))
   mcmc_log_prior <- stan_model(file.path(project_directory, "mcmc_stan/pump_model_mcmc_log_prior.stan"))
-  
+
   save(vb_model, vb_means, vb_log_prior, vb_log_density,
        mcmc_model, mcmc_log_prior, file=rdata_file)
 }
@@ -114,13 +114,17 @@ results <-
   dcast(par + metric + group ~ method, value.var="value")
 
 if (FALSE) {
+grid.arrange(
   ggplot(filter(results, metric=="mean")) +
     geom_point(aes(x=mcmc, y=mfvb, color=par)) +
     geom_abline(aes(intercept=0, slope=1))
+,
   ggplot(filter(results, metric=="sd")) +
     geom_point(aes(x=mcmc, y=mfvb, color="mfvb", shape=par), size=3) +
     geom_point(aes(x=mcmc, y=lrvb, color="lrvb", shape=par), size=3) +
     geom_abline(aes(intercept=0, slope=1))
+, ncol=2  
+)
 }
 
 
@@ -133,8 +137,8 @@ if (FALSE) {
 ########################
 # Get the VB parametric sensitivity.
 
-# TODO: normalize all the sensitivity measures.
-
+# Normalize all the sensitivity measures by the LRVB standard deviation.
+lrvb_sd_scale <- sqrt(diag(lrvb_cov))
 
 vb_log_prior_dat <- vb_fit_dat
 vb_log_prior_dat$beta_prior_shape <- data_dat$beta_prior_shape
@@ -156,7 +160,7 @@ prior_ids <- setdiff(1:length(vb_log_prior_pars_free), param_ids)
 log_prior_jac <- (0.5 * (log_prior_hess + t(log_prior_hess)))[param_ids, prior_ids]
 
 prior_param_names <- vb_log_prior_fitobj@.MISC$stan_fit_instance$unconstrained_param_names(FALSE, FALSE)[prior_ids]
-log_prior_sens <- -1 * moment_jac %*% solve(vb_fit$hessian, log_prior_jac)
+log_prior_sens <- -1 * moment_jac %*% solve(vb_fit$hessian, log_prior_jac) / lrvb_sd_scale
 
 vb_sensitivity_list <- list()
 for (prior_ind in 1:length(prior_param_names)) {
@@ -180,6 +184,7 @@ sens_results <-
 num_draws <- 5000
 
 # Get the beta influence function results
+# Note: you can ignore the Stan warning.
 GetBetaLogQGradTerm <- GetGetBetaLogQGradTermFunction()
 
 beta_influence_results <- GetVariationalInfluenceResults(
@@ -192,7 +197,8 @@ beta_influence_results <- GetVariationalInfluenceResults(
 
 vb_beta_worst_case_df <-
   with(beta_influence_results,
-       GetParamRow(value=worst_case, par=moment_df$par, metric="beta", method="lrvb", group=moment_df$group))
+       GetParamRow(value=worst_case / lrvb_sd_scale, par=moment_df$par,
+                   metric="beta", method="lrvb", group=moment_df$group))
 
 
 # Get the lambda influence functions
@@ -206,20 +212,28 @@ for (ind in 1:data_dat$N) {
     GetLogQGradTerm=GetLambdaStarLogQGradTermFunction(ind),
     GetLogQ=function(u) { LambdaStarLogQ(u, ind) },
     GetLogPrior=LambdaStarLogPrior)
-  
+
   lambda_influence_results$df <-
     with(lambda_influence_results,
-         GetParamRow(value=worst_case, par=moment_df$par, metric=paste("lambda_star[", ind, "]", sep=""),
+         GetParamRow(value=worst_case / lrvb_sd_scale, par=moment_df$par,
+                     metric=paste("lambda_star[", ind, "]", sep=""),
                      method="lrvb", group=moment_df$group))
-  
+
   lambda_worst_case_list[[length(lambda_worst_case_list) + 1]] <- lambda_influence_results
 }
 
 vb_lambda_worst_case_df <- do.call(rbind, lapply(lambda_worst_case_list, function(x) { x$df }))
 
+# Also normalize the gustafson result
+gustafson_result_df <- mcmc_env$gustafson_result_df %>%
+  mutate(value=value / sd) %>% select(-sd)
+
+mcmc_worst_case_df <- mcmc_env$mcmc_worst_case_df %>%
+  mutate(value=value / sd) %>% select(-sd)
+
 worst_case_df <-
-  rbind(mcmc_env$gustafson_result_df,
-        mcmc_env$mcmc_worst_case_df,
+  rbind(gustafson_result_df,
+        mcmc_worst_case_df,
         vb_beta_worst_case_df, vb_lambda_worst_case_df) %>%
   dcast(par + group + metric ~ method, value.var="value") %>%
   filter(metric != "lambda_star")
@@ -238,14 +252,14 @@ for (g in 1:max(moment_df$group)) {
 
 
 GetMCMCInfluenceFunctionsDataFrame <- function(mcmc_inf_funs, ind, GetLogPrior, metric, num_mcmc_draws=5000) {
-  param_draws <- mcmc_inf_funs$dens_at_draws$x
+  param_draws <- mcmc_inf_funs$param_draws
   g_draws <- draws_mat[, ind]
   worst_case_results <- mcmc_inf_funs$GetMCMCWorstCaseResults(g_draws)
   mcmc_rows <- sample(length(param_draws), num_mcmc_draws)
-  mcmc_inf_df <- 
+  mcmc_inf_df <-
     data.frame(u=param_draws[mcmc_rows],
                log_prior=GetLogPrior(param_draws[mcmc_rows]),
-               log_dens=log(mcmc_inf_funs$dens_at_draws$y[mcmc_rows]),
+               log_dens=log(mcmc_inf_funs$dens_at_draws[mcmc_rows]),
                worst_case_u=worst_case_results$worst_u[mcmc_rows],
                influence=worst_case_results$mcmc_influence[mcmc_rows],
                gbar=mcmc_inf_funs$GetConditionalMeanDiff(g_draws)[mcmc_rows],
@@ -283,47 +297,49 @@ save(results, sens_results, worst_case_df, vb_inf_df, mcmc_inf_df,
 
 stop("Graphs follow, not executing")
 
+# Basics
+
+
+
 
 ##################################
 # Look at influence functions
 
 
-if (FALSE) {
-  grid.arrange(
-    ggplot() +
-      geom_point(data=vb_inf_df, aes(x=u, y=influence, color="lrvb")) +
-      geom_point(data=mcmc_inf_df, aes(x=u, y=influence, color="mcmc"))
-    ,
-    ggplot() +
-      geom_point(data=vb_inf_df, aes(x=u, y=gbar, color="lrvb")) +
-      geom_point(data=mcmc_inf_df, aes(x=u, y=gbar, color="mcmc"))
-    ,
-    ggplot() +
-      geom_point(data=vb_inf_df, aes(x=u, y=exp(log_dens), color="lrvb")) +
-      geom_point(data=mcmc_inf_df, aes(x=u, y=exp(log_dens), color="mcmc"))
-    ,
-    # ggplot() +
-    #   geom_point(data=vb_inf_df, aes(x=u, y=exp(log_prior), color="lrvb")) +
-    #   geom_point(data=mcmc_inf_df, aes(x=u, y=exp(log_prior), color="mcmc"))
-    # ,
-    ggplot() +
-      geom_point(data=vb_inf_df, aes(x=u, y=worst_case_u, color="lrvb")) +
-      geom_point(data=mcmc_inf_df, aes(x=u, y=worst_case_u, color="mcmc")) +
-      geom_point(data=mcmc_inf_df, aes(x=u, y=exp(log_prior), color="prior"))
-    , ncol=4
-  )
-  
-  # The prior is so diffuse that this looks crazy.
-  num_prior_points <- 500
-  prior_draws <- qinvgamma(seq(1 / (num_prior_points + 1), 1 - 1 / (num_prior_points + 1), length.out=num_prior_points),
-                           shape=data_dat$beta_prior_shape, scale=data_dat$beta_prior_scale)
-  prior_draws <- seq(0, 2, length.out=num_prior_points)
-  log_prior_vals <- BetaLogPrior(prior_draws)
+grid.arrange(
+  ggplot() +
+    geom_point(data=vb_inf_df, aes(x=u, y=influence, color="lrvb")) +
+    geom_point(data=mcmc_inf_df, aes(x=u, y=influence, color="mcmc"))
+  ,
+  ggplot() +
+    geom_point(data=vb_inf_df, aes(x=u, y=gbar, color="lrvb")) +
+    geom_point(data=mcmc_inf_df, aes(x=u, y=gbar, color="mcmc"))
+  ,
+  ggplot() +
+    geom_point(data=vb_inf_df, aes(x=u, y=exp(log_dens), color="lrvb")) +
+    geom_point(data=mcmc_inf_df, aes(x=u, y=exp(log_dens), color="mcmc"))
+  ,
+  # ggplot() +
+  #   geom_point(data=vb_inf_df, aes(x=u, y=exp(log_prior), color="lrvb")) +
+  #   geom_point(data=mcmc_inf_df, aes(x=u, y=exp(log_prior), color="mcmc"))
+  # ,
   ggplot() +
     geom_point(data=vb_inf_df, aes(x=u, y=worst_case_u, color="lrvb")) +
     geom_point(data=mcmc_inf_df, aes(x=u, y=worst_case_u, color="mcmc")) +
-    geom_point(aes(x=prior_draws, y=exp(log_prior_vals)))
-}
+    geom_point(data=mcmc_inf_df, aes(x=u, y=exp(log_prior), color="prior"))
+  , ncol=4
+)
+
+# The prior is so diffuse that this looks crazy.
+num_prior_points <- 500
+prior_draws <- qinvgamma(seq(1 / (num_prior_points + 1), 1 - 1 / (num_prior_points + 1), length.out=num_prior_points),
+                         shape=data_dat$beta_prior_shape, scale=data_dat$beta_prior_scale)
+prior_draws <- seq(0, 2, length.out=num_prior_points)
+log_prior_vals <- BetaLogPrior(prior_draws)
+ggplot() +
+  geom_point(data=vb_inf_df, aes(x=u, y=worst_case_u, color="lrvb")) +
+  geom_point(data=mcmc_inf_df, aes(x=u, y=worst_case_u, color="mcmc")) +
+  geom_point(aes(x=prior_draws, y=exp(log_prior_vals)))
 
 
 # Compare g terms
@@ -345,7 +361,7 @@ vb_dens <- exp(BetaLogQ(beta_influence_results$u_draws))
 sorting_order <- order(beta_influence_results$u_draws)
 sum(diff(beta_influence_results$u_draws[sorting_order]) * vb_dens[sorting_order[-1]])
 sorting_order <- order(mcmc_env$mcmc_draws$beta)
-sum(diff(mcmc_env$mcmc_draws$beta[sorting_order]) * beta_mcmc_funs$dens_at_draws$y[sorting_order[-1]])
+sum(diff(mcmc_env$mcmc_draws$beta[sorting_order]) * beta_mcmc_funs$dens_at_draws[sorting_order[-1]])
 
 # Lambda influence
 lambda_ind <- 3
@@ -375,37 +391,31 @@ ggplot() +
 vb_dens <- exp(LambdaStarLogQ(vb_influence_results$u_draws, lambda_ind))
 ggplot() +
   geom_point(aes(x=vb_influence_results$u_draws, y=vb_dens, color="lrvb")) +
-  geom_point(aes(x=lambda_star_draws[mcmc_rows], y=mcmc_funs$dens_at_draws$y[mcmc_rows], color="mcmc"))
+  geom_point(aes(x=lambda_star_draws[mcmc_rows], y=mcmc_funs$dens_at_draws[mcmc_rows], color="mcmc"))
 
 
 ####################
 # Graphs
 
-if (FALSE) {
-  ggplot(filter(worst_case_df, metric == "beta")) +
-    geom_point(aes(x=gustafson, y=lrvb, color=paste(par, group)), size=3) +
-    geom_abline(aes(intercept=0, slope=1))
-  
-  ggplot(filter(worst_case_df, metric != "beta")) +
-    geom_point(aes(x=gustafson, y=lrvb, color=metric), size=3) +
-    geom_abline(aes(intercept=0, slope=1))
-  
-  # Check Gustafson
-  ggplot(filter(worst_case_df, metric == "beta")) +
-    geom_point(aes(x=gustafson, y=mcmc, color=paste(par, group)), size=3) +
-    geom_abline(aes(intercept=0, slope=1))
-  
-  ggplot(filter(worst_case_df, metric != "beta")) +
-    geom_point(aes(x=gustafson, y=mcmc, color=paste(par, group)), size=3) +
-    geom_abline(aes(intercept=0, slope=1))
-}
+ggplot(filter(worst_case_df, metric == "beta")) +
+  geom_point(aes(x=gustafson, y=lrvb, color=paste(par, group)), size=3) +
+  geom_abline(aes(intercept=0, slope=1))
+
+ggplot(filter(worst_case_df, metric != "beta")) +
+  geom_point(aes(x=gustafson, y=lrvb, color=metric), size=3) +
+  geom_abline(aes(intercept=0, slope=1))
+
+# Check Gustafson
+ggplot(filter(worst_case_df, metric == "beta")) +
+  geom_point(aes(x=gustafson, y=mcmc, color=paste(par, group)), size=3) +
+  geom_abline(aes(intercept=0, slope=1))
+
+ggplot(filter(worst_case_df, metric != "beta")) +
+  geom_point(aes(x=gustafson, y=mcmc, color=paste(par, group)), size=3) +
+  geom_abline(aes(intercept=0, slope=1))
 
 
-if (FALSE) {
-  ggplot(sens_results) + 
-    geom_point(aes(x=mcmc, y=lrvb, color=paste(par, group), shape=metric), size=3) +
-    geom_abline(aes(intercept=0, slope=1))
-}
-
-
-
+ggplot(sens_results) +
+  geom_point(aes(x=mcmc, y=lrvb, shape=par), size=3) +
+  geom_abline(aes(intercept=0, slope=1)) +
+  facet_grid(~ metric)

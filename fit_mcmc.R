@@ -56,7 +56,7 @@ gustafson_result_original_df <-
   mutate(metric=sub("([0-9]+)", "[\\1]", metric, fixed=FALSE))
 
 # Get Gustafson's results in our format.
-gustafson_result_df <-
+gustafson_result_df_nosd <-
   GetParamRow(value=gustafson_result_original_df$value,
               par=gustafson_result_original_df$par,
               group=gustafson_result_original_df$group,
@@ -88,6 +88,11 @@ mcmc_results <- rbind(
   do.call(rbind, lapply(1:data_dat$N, function(ind) { GetMCMCLambdaGroupResults(ind, mcmc_draws) } )),
   GetMCMCBetaResults(mcmc_draws))
 
+# Put the posterior standard deviations into Gustafson's results so they can be normalized.
+gustafson_result_df <-
+  inner_join(gustafson_result_df_nosd,
+             filter(mcmc_results, metric == "sd") %>% select(par, group, value) %>% rename(sd=value), 
+             by=c("par", "group"))
 
 ######################
 # MCMC sensitivity
@@ -122,7 +127,7 @@ mcmc_sensitivity_df <- rbind(
 # Beta
 beta_mcmc_influence_funs <- GetMCMCInfluenceFunctions(mcmc_draws$beta, BetaLogPrior)
 GetMCMCWorstCase <- beta_mcmc_influence_funs$GetMCMCWorstCase
-mcmc_beta_worst_case_df <-GetMCMCWorstCaseResults(GetMCMCWorstCase, "beta")
+mcmc_beta_worst_case_df <- GetMCMCWorstCaseResults(GetMCMCWorstCase, "beta")
 
 # Lambda
 lambda_mcmc_influence_funs_list <- list()
@@ -137,7 +142,11 @@ for (prior_ind in 1:data_dat$N) {
     GetMCMCWorstCaseResults(GetMCMCWorstCase, prior_metric)
 }
 
-mcmc_worst_case_df <- rbind(do.call(rbind, lambda_worst_case_list), mcmc_beta_worst_case_df)
+mcmc_worst_case_df <-
+  rbind(do.call(rbind, lambda_worst_case_list), mcmc_beta_worst_case_df) %>%
+  inner_join(filter(mcmc_results, metric == "sd") %>%
+               select(par, group, value) %>% rename(sd=value), 
+             by=c("par", "group"))
 
 #######################################
 # Save
