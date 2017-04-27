@@ -150,4 +150,4 @@ save(
   mcmc_draws,
   beta_mcmc_influence_funs,
   lambda_worst_case_list,
-  file=file.path(data_directory, "mcmc_results_file"))
+  file=file.path(data_directory, mcmc_results_file))

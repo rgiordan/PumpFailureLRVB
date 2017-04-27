@@ -7,7 +7,8 @@ library(invgamma)
 library(gridExtra)
 library(LRVBUtils)
 
-project_directory <- file.path(Sys.getenv("GIT_REPO_LOC"), "variational_bayes/pump_failure")
+project_directory <- file.path(Sys.getenv("GIT_REPO_LOC"), "PumpFailureLRVB")
+data_directory <- file.path(project_directory, "data")
 source(file.path(project_directory, "result_lib.R"))
 source(file.path(project_directory, "distributions_lib.R"))
 
@@ -15,7 +16,7 @@ model_name <- "pump_model_transform"
 
 save_filename <- paste(model_name, "vb_analysis.Rdata", sep="_")
 
-rdata_file <- file.path(project_directory, paste(model_name, "stan.Rdata", sep="_")) 
+rdata_file <- file.path(data_directory, paste(model_name, "stan.Rdata", sep="_")) 
 if (file.exists(rdata_file)) {
   print("Loading from file.")
   load(rdata_file)
@@ -44,9 +45,16 @@ data_dat <- list(N=nrow(pump_data), s=pump_data$failures, t=pump_data$thousand_h
 #####################
 # VB fit
 
-vb_dat <- list(lambda_star_shape=pump_data$mcmc_mean, lambda_star_rate=rep(1, data_dat$N),
+lambda_star_mean <- colMeans(mcmc_env$mcmc_draws$lambda)
+vb_dat <- list(lambda_star_shape=lambda_star_mean , lambda_star_rate=rep(1.0, data_dat$N),
                beta_mean=mean(mcmc_env$mcmc_draws$beta), beta_var=var(mcmc_env$mcmc_draws$beta))
-vb_fit <- optimizing(vb_model, data=data_dat, algorithm="Newton", hessian=TRUE, verbose=TRUE)
+vb_fit <- optimizing(vb_model, data=data_dat, init=vb_dat, algorithm="BFGS",
+                     hessian=TRUE, verbose=TRUE, iter=1000, tol_rel_grad=1e-16)
+vb_dat <- list(lambda_star_shape=vb_fit$par[sprintf("lambda_star_shape[%d]", 1:10)],
+               lambda_star_rate=vb_fit$par[sprintf("lambda_star_rate[%d]", 1:10)],
+               beta_mean=vb_fit$par["beta_mean"],
+               beta_var=vb_fit$par["beta_var"])
+vb_fit <- optimizing(vb_model, data=data_dat, init=vb_dat, algorithm="Newton", hessian=TRUE, verbose=TRUE, iter=100)
 
 vb_results <- rbind(
   do.call(rbind, lapply(1:data_dat$N, function(ind) { GetVBLambdaStarGroupResults(ind, vb_fit) } )),
@@ -124,6 +132,9 @@ if (FALSE) {
 
 ########################
 # Get the VB parametric sensitivity.
+
+# TODO: normalize all the sensitivity measures.
+
 
 vb_log_prior_dat <- vb_fit_dat
 vb_log_prior_dat$beta_prior_shape <- data_dat$beta_prior_shape
