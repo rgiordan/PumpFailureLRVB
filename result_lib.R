@@ -36,7 +36,7 @@ GetMCMCLambdaSensitivityResults <- function(mcmc_draws, log_prior_grad_mat, prio
     for (prior_ind in 1:length(prior_param_names)) {
       result_list[[length(result_list) + 1]] <-
         GetParamRow(value=sens[ind, prior_ind] / lambda_sd_scale[ind],
-                    par="lambda", group=ind, method="mcmc",
+                    par="lambda", group=ind, method="mcmc_norm",
                     metric=prior_param_names[prior_ind])
     }
   }
@@ -53,7 +53,7 @@ GetMCMCBetaSensitivityResults <- function(mcmc_draws, log_prior_grad_mat, prior_
   for (prior_ind in 1:length(prior_param_names)) {
     result_list[[length(result_list) + 1]] <-
       GetParamRow(value=sens[1, prior_ind] / beta_sd_scale,
-                  par="beta", method="mcmc", metric=prior_param_names[prior_ind])
+                  par="beta", method="mcmc_norm", metric=prior_param_names[prior_ind])
   }
   return(do.call(rbind, result_list))
 }

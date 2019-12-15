@@ -165,7 +165,7 @@ log_prior_sens <- -1 * moment_jac %*% solve(vb_fit$hessian, log_prior_jac) / lrv
 vb_sensitivity_list <- list()
 for (prior_ind in 1:length(prior_param_names)) {
   vb_sensitivity_list[[length(vb_sensitivity_list) + 1]] <-
-    moment_df %>% mutate(method="lrvb", metric=prior_param_names[prior_ind], value=log_prior_sens[, prior_ind])
+    moment_df %>% mutate(method="lrvb_norm", metric=prior_param_names[prior_ind], value=log_prior_sens[, prior_ind])
 }
 vb_sensitivity_df <- do.call(rbind, vb_sensitivity_list)
 
@@ -293,7 +293,7 @@ mcmc_inf_df <- GetMCMCInfluenceFunctionsDataFrame(
 # save for paper
 
 save(results, sens_results, worst_case_df, vb_inf_df, mcmc_inf_df,
-     file=file.path(project_directory, "data", save_filename))
+     file=file.path(data_directory, save_filename))
 
 stop("Graphs follow, not executing")
 
